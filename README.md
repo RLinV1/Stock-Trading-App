@@ -47,7 +47,6 @@
 
 ```bash
 git clone https://github.com/RLinV1/tradepro.git
-cd stock-trading-app
 
 ```
 
