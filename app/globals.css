@@ -1,26 +1,67 @@
 @import "tailwindcss";
+@plugin "flowbite-react/plugin/tailwindcss";
+@source "../.flowbite-react/class-list.json";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: 220 13% 9%;
+  --foreground: 210 40% 98%;
+  --card: 220 13% 11%;
+  --border: 220 13% 18%;
+  --primary: 142 71% 45%;
+  --success: 142 71% 45%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --accent: 210, 100%, 56%;
+  --warning: 47, 89%, 50%;
+  --danger: 0, 100%, 67%;
+  --muted: 215, 16%, 47%;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+
+
+/* Use HSL variables with tailwind-friendly classes */
+.bg-background {
+  background-color: hsl(var(--background));
+}
+.text-foreground {
+  color: hsl(var(--foreground));
+}
+.bg-card {
+  background-color: hsl(var(--card));
+}
+.border-border {
+  border-color: hsl(var(--border));
+}
+.text-primary {
+  color: hsl(var(--primary));
+}
+.text-success {
+  color: hsl(var(--success));
+}
+.text-danger {
+  color: hsl(var(--danger));
+}
+.bg-success {
+  background-color: hsl(var(--success));
+}
+.bg-danger {
+  background-color: hsl(var(--danger));
+}
+.text-muted-foreground {
+  color: hsl(var(--muted-foreground));
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Darker background utility */
+.bg-dark-custom {
+  background-color: hsl(222 84% 5%) !important; /* a very dark shade */
 }
 
+/* Lighter background utility */
+.bg-light-custom {
+  background-color: hsl(221, 55%, 8%) !important; /* a lighter but still dark shade */
+}
+
+/* other styles */
 body {
-  background: var(--background);
-  color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
 }
