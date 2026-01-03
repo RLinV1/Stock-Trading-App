@@ -1,5 +1,6 @@
 import axios from "axios";
 import { Stock, UserData, UserStock } from "../_types/types";
+import { useEffect, useState } from "react";
 
 export const getUserStocks = async (
   userData: UserData,
@@ -68,6 +69,14 @@ export const sellStock = async (
   return response.data;
 };
 
+export const searchStock = async (query: string) => {
+  const res = await axios.get<Stock[]>(
+        `http://localhost:8080/api/stock/search?query=${query}`,
+        { withCredentials: true }
+      );
+    return res.data
+
+}
 export const getTotalProfit = (userStocksData: UserStock[]) => {
   const totalProfit = userStocksData.reduce((acc: number, us: UserStock) => {
     if (!us.stock || !us.avgCost) return acc;
@@ -98,4 +107,14 @@ export const getTotalPortfolioValue = (userStocksData: UserStock[]) => {
   return totalValue;
 };
 
+export function useDebounce<T>(value: T, delay: number) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
 
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+
+    return () => clearTimeout(handler); // cleanup if value changes
+  }, [value, delay]);
+
+  return debouncedValue;
+}

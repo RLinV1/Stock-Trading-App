@@ -14,9 +14,13 @@ import {
   getTotalProfit,
   getTotalReturnPercentage,
   getUserStocks,
+  searchStock,
   sellStock,
+  useDebounce,
 } from "./_util/stock";
 export default function Home() {
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [userStocks, setUserStocks] = useState<UserStock[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,32 +33,46 @@ export default function Home() {
   const [userData, setUserData] = useState<UserData | null>(null); // Example dashboard data
   const [totalProfit, setTotalProfit] = useState<number>(0);
   const [totalReturnPercentage, setTotalReturnPercentage] = useState<number>(0);
+
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<Stock[]>([]);
+  const debouncedQuery = useDebounce(query, 300); // 300ms debounce
+
   const router = useRouter();
 
-  useEffect(() => {
-    const fetchAuth = async () => {
-      try {
-        const user = await checkAuth();
-        if (user && "message" in user) {
-          router.push("/login");
-          console.error(user.message);
-        } else if (user) {
-          setTotalCash(user.cashBalance);
-          setUserData(user);
-        }
-      } catch (err) {
-        if (err instanceof Error) console.error(err.message);
-      } finally {
-        setLoading(false);
+  const refreshUser = async () => {
+    try {
+      const user = await checkAuth();
+
+      if (user && "message" in user) {
+        alert("Your session has expired. Please log in again.");
+        router.push("/login");
+        return;
       }
+
+      if (user) {
+        setTotalCash(user.cashBalance);
+        setUserData(user);
+      }
+    } catch (err) {
+      if (err instanceof Error) console.error(err.message);
+    }
+  };
+  useEffect(() => {
+    const run = async () => {
+      await refreshUser();
+      setLoading(false);
     };
-    fetchAuth();
+
+    run();
+    const intervalId = setInterval(refreshUser, 30000); // every 30s
+    return () => clearInterval(intervalId);
   }, [router]);
 
   useEffect(() => {
     if (!userData) return;
 
-    console.log(userData)
+    console.log(userData);
     const fetchAll = async () => await fetchData();
     fetchAll();
 
@@ -74,7 +92,6 @@ export default function Home() {
   const fetchData = async () => {
     if (!userData?.userId) return; // wait until userData is available
 
-    
     try {
       const stockData = await getStocks();
       setStocks(stockData);
@@ -85,6 +102,7 @@ export default function Home() {
       );
 
       if (userStocksData) {
+        console.log(userStocksData);
         setUserStocks(userStocksData);
 
         const totalValue = getTotalPortfolioValue(userStocksData);
@@ -111,7 +129,9 @@ export default function Home() {
 
   const handleBuy = async (userStock: UserStock, shares: number) => {
     try {
-      const stockData = buyStock(userStock, 1);
+      const stockData = await buyStock(userStock, 1);
+      await refreshUser();
+
       console.log(stockData);
       fetchData(); // Refresh data after buying
     } catch (err) {
@@ -123,7 +143,9 @@ export default function Home() {
 
   const handleSell = async (userStock: UserStock, shares: number) => {
     try {
-      const sellStockData = sellStock(userStock, 1);
+      const sellStockData = await sellStock(userStock, 1);
+      await refreshUser();
+
       fetchData();
     } catch (err) {
       if (err instanceof Error) {
@@ -131,6 +153,23 @@ export default function Home() {
       }
     }
   };
+  useEffect(() => {
+    if (!debouncedQuery) {
+      setResults([]); // immediately clear results if input is empty
+      return;
+    }
+
+    const performSearch = async () => {
+      try {
+        const searchData = await searchStock(debouncedQuery);
+        setResults(searchData);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    performSearch();
+  }, [debouncedQuery]);
 
   if (loading) {
     return (
@@ -145,48 +184,72 @@ export default function Home() {
       <div className="flex flex-col flex-1 bg-dark-custom">
         {/* Header */}
         <header className="border-b border-border bg-light-custom backdrop-blur-sm sticky top-0 z-40">
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <BarChart3 className="h-8 w-8 text-primary" />
-                <h1 className="text-2xl font-bold text-foreground">TradePro</h1>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="text-center">
-                  <div className="text-md text-muted-foreground">
-                    Portfolio Value
-                  </div>
-                  <div className="text-xl font-bold text-success">
-                    ${portfolioValue.toFixed(2)}
-                  </div>
+          <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+            {/* Logo */}
+            <div className="flex items-center gap-2">
+              <BarChart3 className="h-8 w-8 text-primary" />
+              <h1 className="text-2xl font-bold text-foreground">TradePro</h1>
+            </div>
+
+            {/* Search */}
+            <div className="relative w-1/2 mx-8">
+              <input
+                type="text"
+                placeholder="Search stock symbol or name"
+                className="w-full border p-3 rounded-lg text-lg"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+
+              {results.length > 0 && (
+                <div className="absolute top-full left-0 w-full border rounded shadow-lg z-50 max-h-60 overflow-y-auto bg-background">
+                  {results.map((stock) => (
+                    <div
+                      key={stock.id}
+                      className="p-2 cursor-pointer hover:bg-light-custom font-bold"
+                      onClick={() => router.push(`/stocks/${stock.id}`)}
+                    >
+                      {stock.symbol} - {stock.name}
+                    </div>
+                  ))}
                 </div>
-                <div className="text-center">
-                  <div className="text-md text-muted-foreground">
-                    Cash Value
-                  </div>
-                  <div className="text-xl font-bold text-success">
-                    ${totalCash.toFixed(2)}
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="text-right">
-                  <div className="text-md text-muted-foreground">User</div>
-                  <div className="text-xl font-bold text-success">
-                    {userData?.username}
-                  </div>
-                </div>
-              </div>
-              <div>
-                <div className="text-right">
+              )}
+            </div>
+
+            {/* User dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setDropdownOpen(!dropdownOpen)}
+                className="flex items-center gap-2 text-success font-bold text-lg focus:outline-none cursor-pointer"
+              >
+                {userData?.username}
+                <svg
+                  className={`w-4 h-4 transition-transform ${
+                    dropdownOpen ? "rotate-180" : ""
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </button>
+
+              {dropdownOpen && (
+                <div className="absolute -right-4 mt-1 bg-background w-40 border rounded shadow-lg z-50">
                   <div
-                    className="text-xl font-bold text-success cursor-pointer"
-                    onClick={() => handleSignOut()}
+                    className="px-4 py-2 cursor-pointer hover:bg-gray-800 font-bold"
+                    onClick={handleSignOut}
                   >
-                    Sign out
+                    Sign Out
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </header>
@@ -202,7 +265,7 @@ export default function Home() {
                 <div className="flex items-center text-xl gap-8">
                   <div
                     className="flex items-center space-x-2 cursor-pointer rounded-lg p-2
-                      hover:bg-blue-500 hover:text-black"
+                      hover:bg-blue-500 hover:text-black h-full"
                     onClick={() => setBarType("performance")}
                   >
                     <TrendingUp className="h-4 w-4 mr-1" />
@@ -219,7 +282,7 @@ export default function Home() {
                 </div>
               </div>
               <div
-                className={`w-full ${barType === "allocation" ? "hidden" : ""}`}
+                className={`w-full h-full ${barType === "allocation" ? "hidden" : ""}`}
               >
                 <PortfolioLineChart
                   portfolioValue={portfolioValue}
@@ -242,17 +305,18 @@ export default function Home() {
             {/* Right Side - Live Market Data */}
             <div className="w-full sm:w-full  lg:w-1/2">
               <h2 className="text-3xl my-4">Live Market Data</h2>
-              <p className="text-sm text-muted-foreground mb-4">
-                Real-time updates on stock prices and market trends
-              </p>
+              
               <div className="flex flex-col gap-6 w-full">
                 {loading ? (
                   <div className="text-lg">Loading stock data...</div>
                 ) : stocks.length > 0 ? (
-                  stocks.map((stock) => (
+                  stocks.slice(0,4).map((stock) => (
                     <div
                       key={stock.symbol}
-                      className="bg-card p-4 rounded-lg shadow-md text-lg"
+                      className="bg-card p-4 rounded-lg shadow-md text-lg cursor-pointer"
+                      onClick={() => {
+                        router.push(`/stocks/${stock.id}`)
+                      }}
                     >
                       <div className="flex flex-col">
                         <div className="flex justify-between items-center font-bold text-foreground">
@@ -289,7 +353,7 @@ export default function Home() {
                   Total Cash
                 </div>
                 <div className="text-2xl font-bold text-success">
-                  ${totalCash.toFixed(2)}
+                  ${totalCash.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
               </div>
               <div className="">
@@ -324,7 +388,7 @@ export default function Home() {
           <div className="mt-8 w-full rounded-lg shadow-md text-3xl">
             <h2 className="text-3xl font-semibold mb-4">Holdings</h2>
             {userStocks.length > 0 ? (
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-4 max-h-500 overflow-auto">
                 {userStocks.map((userStock) => {
                   if (!userStock.stock || !userStock.avgCost) return null;
 

@@ -55,8 +55,10 @@ const SignInPage = () => {
       });
 
       if (!response.ok) {
-        throw new Error("Invalid credentials or server error");
+        const errorText = await response.text();
+        throw new Error(errorText || `HTTP error ${response.status}`);
       }
+
 
       const data = await response.json();
       console.log("Response data:", data);
@@ -64,7 +66,24 @@ const SignInPage = () => {
       router.push("/"); // Redirect to home page
     } catch (err) {
       console.error("Error during sign-in or registration:", err);
-      setError(err instanceof Error ? err.message : "Unexpected error");
+      if (!(err instanceof Error)) {
+        setError("An unknown error occurred.");
+        return;
+      }
+
+       const formattedError = err.message
+      .split(';')
+      .map(msg => msg.trim())
+      .filter(msg => msg.length > 0)
+      .map(msg => {
+        // Remove "fieldName: " prefix if it exists
+        const colonIndex = msg.indexOf(':');
+        return colonIndex > 0 ? msg.substring(colonIndex + 1).trim() : msg;
+      })
+      .map(msg => `• ${msg}`)
+      .join('\n');
+      
+      setError(formattedError);
     }
   };
 
@@ -124,12 +143,18 @@ const SignInPage = () => {
           <button
             type="button"
             className="text-sm text-gray-500 text-center mt-4 cursor-pointer hover:text-blue-500 transition"
-            onClick={() => setSignIn(!signIn)}
+            onClick={() => {setSignIn(!signIn); setError(""); }}
           >
             {signIn ? "Don't have an account? " : "Already have an account? "}
           </button>
 
-          {error && <p className="text-red-500 text-center">{error}</p>}
+          {error && (
+          <div className="text-red-500 text-center">
+            {error.split('\n').map((line, index) => (
+              <div key={index}>{line}</div>
+            ))}
+          </div>
+        )}
         </form>
       </div>
     </div>

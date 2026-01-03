@@ -24,17 +24,20 @@ const AllocationChartComponent = ({data, portfolioValue} : AllocationChartCompon
         if (item.stock) {
           const percentage = Number((((item.shares * item.stock.currentPrice) / portfolioValue) * 100).toFixed(2));
 
-          let color = "hsl(var(--danger))"; // Default color
+
+          const generateRandomColor = () => {
+            const hue = Math.floor(Math.random() * 360); // 0-360 degrees
+            const saturation = Math.floor(Math.random() * 30) + 60; // 60-90%
+            const lightness = Math.floor(Math.random() * 20) + 50; // 50-70%
+            return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+          };
+
+          let color = generateRandomColor();
 
           if (percentage < 1) {
             continue; // Skip entries with less than 1% allocation
-          } else if (percentage > 50) {
-            color = "hsl(var(--success))";
-          } else if (percentage > 20) {
-            color = "hsl(var(--warning))";
-          } else if (percentage > 10) {
-            color = "hsl(var(--accent))";
           }
+
           newAllocationData.push({
             name: item.stock.symbol,
             value: percentage,
@@ -82,6 +85,7 @@ const AllocationChartComponent = ({data, portfolioValue} : AllocationChartCompon
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
+
               <Tooltip
                 contentStyle={{
                   backgroundColor: "white",
@@ -89,7 +93,10 @@ const AllocationChartComponent = ({data, portfolioValue} : AllocationChartCompon
                   borderRadius: "8px",
                   color: "limegreen",
                 }}
-                formatter={(value: number) => [`${value.toFixed(2)}%`, "Allocation"]}
+                formatter={(value: number, name: string) => [
+                  `${value.toFixed(2)}%`,
+                  name // Shows the stock name
+                ]}
               />
             </PieChart>
           </ResponsiveContainer>
