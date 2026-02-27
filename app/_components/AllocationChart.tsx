@@ -32,7 +32,7 @@ const AllocationChartComponent = ({data, portfolioValue} : AllocationChartCompon
             return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
           };
 
-          let color = generateRandomColor();
+          const color = generateRandomColor();
 
           if (percentage < 1) {
             continue; // Skip entries with less than 1% allocation

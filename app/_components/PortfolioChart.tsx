@@ -169,8 +169,8 @@ const PortfolioLineChartComponent = ({
                         : "white";
 
                     return [
-                      <span style={{ color }}>{`${formattedValue}${formattedPercentage}`}</span>,
-                      <span style={{ color }}>Value</span>,
+                      <span key="1" style={{ color }}>{`${formattedValue}${formattedPercentage}`}</span>,
+                      <span key="2" style={{ color }}>Value</span>,
                     ];
               }}
               contentStyle={{ backgroundColor: "#222", borderColor: "#555" }} // dark background + border
