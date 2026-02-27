@@ -148,7 +148,7 @@ const PortfolioLineChartComponent = ({
               tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
             />
             <Tooltip
-              formatter={(value: number, name: string, entry: any) => {
+              formatter={(value: number, name: string, entry) => {
                 const percentageChange = entry.payload?.percentageChange;
 
                 const formattedValue = `$${value.toLocaleString(undefined, {
