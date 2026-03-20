@@ -42,8 +42,8 @@ const SignInPage = () => {
     e.preventDefault(); // prevents page reload
 
     const url = signIn
-      ? "https://stock-trading-app-backend-production.up.railway.app//api/auth/login"
-      : "https://stock-trading-app-backend-production.up.railway.app//api/auth/register";
+      ? "https://stock-trading-app-backend-production.up.railway.app/api/auth/login"
+      : "https://stock-trading-app-backend-production.up.railway.app/api/auth/register";
 
     try {
       const response = await fetch(url, {
