@@ -3,7 +3,7 @@ import { UserData, AuthError } from "../_types/types";
 
 export const checkAuth = async (): Promise<UserData | AuthError | null> => {
   try {
-    const res = await axios.get("http://localhost:8080/api/auth/check", {
+    const res = await axios.get("https://stock-trading-app-backend-production.up.railway.app//api/auth/check", {
       withCredentials: true,
     });
 
