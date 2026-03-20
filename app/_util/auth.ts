@@ -3,7 +3,7 @@ import { UserData, AuthError } from "../_types/types";
 
 export const checkAuth = async (): Promise<UserData | AuthError | null> => {
   try {
-    const res = await axios.get("https://stock-trading-app-backend-production.up.railway.app//api/auth/check", {
+    const res = await axios.get("https://stock-trading-app-backend-production.up.railway.app/api/auth/check", {
       withCredentials: true,
     });
 
@@ -12,7 +12,7 @@ export const checkAuth = async (): Promise<UserData | AuthError | null> => {
     if (axios.isAxiosError(err) && (err.response?.status === 401 || err.response?.status === 500)) {
       try {
         const refreshRes = await axios.post(
-          "http://localhost:8080/api/auth/refresh",
+          "https://stock-trading-app-backend-production.up.railway.app/api/auth/refresh",
           null,
           { withCredentials: true }
         );
@@ -22,7 +22,7 @@ export const checkAuth = async (): Promise<UserData | AuthError | null> => {
         }
 
         const retryRes = await axios.get(
-          "http://localhost:8080/api/auth/check",
+          "https://stock-trading-app-backend-production.up.railway.app/auth/check",
           { withCredentials: true }
         );
 
@@ -39,7 +39,7 @@ export const checkAuth = async (): Promise<UserData | AuthError | null> => {
 export const signOut = async () => {
   try {
     const res = await axios.post(
-      "http://localhost:8080/api/auth/signout",
+      "https://stock-trading-app-backend-production.up.railway.app/api/auth/signout",
       null,
       { withCredentials: true }
     );
