@@ -30,7 +30,7 @@ export default function StockDetailPage() {
         setUserData(user);
 
         const res = await axios.get<Stock>(
-          `http://localhost:8080/api/stock/${id}`,
+          `https://stock-trading-app-backend-production.up.railway.app/api/stock/${id}`,
           { withCredentials: true }
         );
         setStock(res.data);
