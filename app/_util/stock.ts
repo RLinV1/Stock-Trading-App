@@ -7,7 +7,7 @@ export const getUserStocks = async (
   stocks: Stock[]
 ): Promise<UserStock[] | null> => {
   const response = await axios.get(
-    "http://localhost:8080/api/user-stock?userId=" + userData?.userId, {
+    "https://stock-trading-app-backend-production.up.railway.app/api/user-stock?userId=" + userData?.userId, {
       withCredentials: true,
     }
   );
@@ -28,7 +28,7 @@ export const getUserStocks = async (
 };
 
 export const getStocks = async (): Promise<Stock[]> => {
-  const res = await axios.get<Stock[]>("http://localhost:8080/api/stock", {
+  const res = await axios.get<Stock[]>("https://stock-trading-app-backend-production.up.railway.app/api/stock", {
       withCredentials: true,
     });
   return res.data;
@@ -39,7 +39,7 @@ export const buyStock = async (
   shares: number
 ): Promise<UserStock> => {
   const response = await axios.post<UserStock>(
-    "http://localhost:8080/api/user-stock/buy",
+    "https://stock-trading-app-backend-production.up.railway.app/api/user-stock/buy",
     {
       id: userStock.id,
       shares: shares, // Assuming buying 1 share for simplicity
@@ -57,7 +57,7 @@ export const sellStock = async (
   shares: number
 ): Promise<UserStock> => {
   const response = await axios.post<UserStock>(
-    "http://localhost:8080/api/user-stock/sell",
+    "https://stock-trading-app-backend-production.up.railway.app/api/user-stock/sell",
     {
       id: userStock.id,
       shares: shares,
@@ -71,7 +71,7 @@ export const sellStock = async (
 
 export const searchStock = async (query: string) => {
   const res = await axios.get<Stock[]>(
-        `http://localhost:8080/api/stock/search?query=${query}`,
+        `https://stock-trading-app-backend-production.up.railway.app/api/stock/search?query=${query}`,
         { withCredentials: true }
       );
     return res.data
