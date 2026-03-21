@@ -12,12 +12,12 @@ import {
   buyStock,
   getStocks,
   getTotalPortfolioValue,
-  getTotalProfit,
   getUserStocks,
   searchStock,
   sellStock,
   useDebounce,
 } from "./_util/stock";
+
 export default function Home() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
@@ -33,7 +33,6 @@ export default function Home() {
   const [userData, setUserData] = useState<UserData | null>(null); // Example dashboard data
   const [totalProfit, setTotalProfit] = useState<number>(0);
   const [totalReturnPercentage, setTotalReturnPercentage] = useState<number>(0);
-  const [initialPortfolioValue, setInitialPortfolioValue] = useState<number>(0);
 
   const [activeTab, setActiveTab] = useState<"dashboard" | "leaderboard">("dashboard");
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -65,16 +64,17 @@ export default function Home() {
 
         if (userStocksData) {
           setUserStocks(userStocksData);
-          const currentPortfolioValue = getTotalPortfolioValue(userStocksData);
-          setPortfolioValue(currentPortfolioValue);
-          setTotalProfit(getTotalProfit(userStocksData));
+          const stocksValue = getTotalPortfolioValue(userStocksData);
+          const totalPortfolioValue = stocksValue + user.cashBalance;
+          setPortfolioValue(totalPortfolioValue);
 
           const costBasis = userStocksData.reduce((acc: number, us: UserStock) => {
             if (!us.avgCost || us.shares === 0) return acc;
             return acc + us.avgCost * us.shares;
           }, 0);
-          setInitialPortfolioValue(costBasis);
-          const returnPct = costBasis > 0 ? ((currentPortfolioValue - costBasis) / costBasis) * 100 : 0;
+          const initialDeposit = costBasis + user.cashBalance;
+          setTotalProfit(totalPortfolioValue - initialDeposit);
+          const returnPct = initialDeposit > 0 ? ((totalPortfolioValue - initialDeposit) / initialDeposit) * 100 : 0;
           setTotalReturnPercentage(returnPct);
         }
       }
@@ -109,11 +109,19 @@ export default function Home() {
           ...us,
           stock: updatedStocks.find((s) => s.id === us.stockId) || us.stock,
         }));
-        const newPortfolioValue = getTotalPortfolioValue(updated);
-        setPortfolioValue(newPortfolioValue);
-        setTotalProfit(getTotalProfit(updated));
-        if (initialPortfolioValue > 0) {
-          setTotalReturnPercentage(((newPortfolioValue - initialPortfolioValue) / initialPortfolioValue) * 100);
+        const cash = userData?.cashBalance ?? 0;
+        const stocksValue = getTotalPortfolioValue(updated);
+        const totalValue = stocksValue + cash;
+        setPortfolioValue(totalValue);
+
+        const costBasis = updated.reduce((acc, us) => {
+          if (!us.avgCost || us.shares === 0) return acc;
+          return acc + us.avgCost * us.shares;
+        }, 0);
+        const initialDeposit = costBasis + cash;
+        setTotalProfit(totalValue - initialDeposit);
+        if (initialDeposit > 0) {
+          setTotalReturnPercentage(((totalValue - initialDeposit) / initialDeposit) * 100);
         }
         return updated;
       });
@@ -320,15 +328,20 @@ export default function Home() {
                         <div className="text-3xl w-12 text-center">
                           {medal ?? <span className="text-muted-foreground text-xl">#{index + 1}</span>}
                         </div>
-                        <div className="font-bold text-xl">
-                          {entry.username}
+                          <div>
+                          <div className="font-bold text-xl">
+                            {entry.username}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            Cash: ${(entry.cashBalance ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </div>
                         </div>
                       </div>
                       <div className="text-right">
                         <div className="text-2xl font-bold text-success">
-                          ${(entry.portfolioValue ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          ${((entry.portfolioValue ?? 0) + (entry.cashBalance ?? 0)).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </div>
-                        <div className="text-sm text-muted-foreground">Portfolio Value</div>
+                        <div className="text-sm text-muted-foreground">Total Value</div>
                       </div>
                     </div>
                   );

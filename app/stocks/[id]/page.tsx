@@ -36,7 +36,8 @@ export default function StockDetailPage() {
         setStock(res.data);
 
         const userStocks = await getUserStocks(user, [res.data]);
-        setUserStock(userStocks?.[0] || null);
+        const match = userStocks?.find((us) => us.stockId === res.data.id) || null;
+        setUserStock(match);
       } catch (err) {
         setError("Failed to load data");
         console.error(err);
@@ -44,27 +45,33 @@ export default function StockDetailPage() {
         setLoading(false);
       }
     };
-  // Fetch stock and user info intially
-   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      await refreshData();
-      setLoading(false);
-    };
-
-    fetchData();
+  // Initial load
+  useEffect(() => {
+    refreshData();
   }, [id, router]);
 
+  // SSE: subscribe to real-time stock price updates
   useEffect(() => {
-    const run = async () => {
-      await refreshData();
-      setLoading(false);
+    const eventSource = new EventSource(
+      `https://stock-trading-app-backend-production.up.railway.app/api/stock/stream`,
+      { withCredentials: true }
+    );
+
+    eventSource.onmessage = (event) => {
+      const updatedStocks: Stock[] = JSON.parse(event.data);
+      const updated = updatedStocks.find((s) => s.id === Number(id));
+      if (updated) {
+        setStock(updated);
+      }
     };
 
-    run();
-    const intervalId = setInterval(refreshData, 30000); // every 30s
-    return () => clearInterval(intervalId);
-  }, [router]);
+    eventSource.onerror = () => {
+      console.error("SSE connection lost, reconnecting...");
+      eventSource.close();
+    };
+
+    return () => eventSource.close();
+  }, [id]);
   
 
   const handleBuy = async () => {
@@ -78,16 +85,7 @@ export default function StockDetailPage() {
       }
 
       await buyStock(userStock, buyShares);
-      // Refresh user cash and stock
-      const updatedUser = await checkAuth();
-
-      if (!updatedUser || "message" in updatedUser) {
-        // user is an AuthError
-        router.push("/login");
-        return;
-      }
-
-      setUserData(updatedUser);
+      await refreshData();
     } catch (err) {
       setError("Failed to buy stock");
       console.error(err);
@@ -104,13 +102,7 @@ export default function StockDetailPage() {
         return;
       }
       await sellStock(userStock, sellShares);
-      const updatedUser = await checkAuth();
-      if (!updatedUser || "message" in updatedUser) {
-        // user is an AuthError
-        router.push("/login");
-        return;
-      }
-      setUserData(updatedUser);
+      await refreshData();
     } catch (err) {
       setError("Failed to sell stock");
       console.error(err);
