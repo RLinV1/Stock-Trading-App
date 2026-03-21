@@ -29,7 +29,6 @@ export interface PortfolioSnapshot {
 
 export interface LeaderboardEntry {
   username: string;
-  portfolioValue: number;
   cashBalance: number;
 }
 

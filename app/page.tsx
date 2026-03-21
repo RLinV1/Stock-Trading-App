@@ -119,7 +119,7 @@ export default function Home() {
   const fetchLeaderboard = async () => {
     try {
       const res = await axios.get<LeaderboardEntry[]>(
-        "https://stock-trading-app-backend-production.up.railway.app/api/leaderboard",
+        "https://stock-trading-app-backend-production.up.railway.app/api/auth/users",
         { withCredentials: true }
       );
       setLeaderboard(res.data);
@@ -309,20 +309,15 @@ export default function Home() {
                         <div className="text-3xl w-12 text-center">
                           {medal ?? <span className="text-muted-foreground text-xl">#{index + 1}</span>}
                         </div>
-                        <div>
-                          <div className={`font-bold text-xl ${index < 3 ? "text-foreground" : "text-foreground"}`}>
-                            {entry.username}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            Cash: ${entry.cashBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </div>
+                        <div className="font-bold text-xl">
+                          {entry.username}
                         </div>
                       </div>
                       <div className="text-right">
                         <div className="text-2xl font-bold text-success">
-                          ${entry.portfolioValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          ${entry.cashBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </div>
-                        <div className="text-sm text-muted-foreground">Portfolio Value</div>
+                        <div className="text-sm text-muted-foreground">Cash Balance</div>
                       </div>
                     </div>
                   );
@@ -333,6 +328,7 @@ export default function Home() {
               </div>
             </div>
           ) : (
+          <>
           <div className="flex items-start justify-between mb-8 w-full lg:gap-12 flex-col gap-4 lg:flex-row">
             {/* Left Side - Portfolio Analysis */}
             <div className="w-full h-full">
@@ -544,6 +540,7 @@ export default function Home() {
               <div className="text-lg">No holdings available</div>
             )}
           </div>
+          </>
           )}
         </main>
       </div>
