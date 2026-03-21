@@ -21,11 +21,13 @@ interface PortfolioDataPoint {
 interface PortfolioLineChartProps {
   portfolioValue: number;
   userId: string;
+  initialDeposit: number;
 }
 
 const PortfolioLineChartComponent = ({
   portfolioValue,
   userId,
+  initialDeposit,
 }: PortfolioLineChartProps) => {
   const [performanceData, setPerformanceData] = useState<PortfolioDataPoint[]>(
     []
@@ -107,9 +109,7 @@ const PortfolioLineChartComponent = ({
     return <div>Loading chart...</div>;
   }
 
-  const initialValue = performanceData[0]?.value || 0;
-  const currentValue = performanceData[performanceData.length - 1]?.value || 0;
-  const totalReturn = currentValue - initialValue;
+  const totalReturn = portfolioValue - initialDeposit;
   const isPositive = totalReturn >= 0;
 
   return (
@@ -129,7 +129,7 @@ const PortfolioLineChartComponent = ({
             }`}
           >
             {isPositive ? "+" : "-"}${Math.abs(totalReturn).toFixed(2)} (
-            {initialValue > 0 ? ((totalReturn / initialValue) * 100).toFixed(2) : "0.00"}%)
+            {initialDeposit > 0 ? ((totalReturn / initialDeposit) * 100).toFixed(2) : "0.00"}%)
           </span>
         </div>
         <p className="text-sm text-muted-foreground">
@@ -156,34 +156,29 @@ const PortfolioLineChartComponent = ({
               tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
             />
             <Tooltip
-              formatter={(value: number, name: string, entry) => {
-                const percentageChange = entry.payload?.percentageChange;
+              formatter={(value: number) => {
+                const profit = value - initialDeposit;
+                const returnPct = initialDeposit > 0 ? ((value - initialDeposit) / initialDeposit) * 100 : 0;
 
                 const formattedValue = `$${value.toLocaleString(undefined, {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}`;
 
-                const formattedPercentage =
-                  percentageChange !== undefined
-                    ? ` (${percentageChange.toFixed(2)}%)`
-                    : "";
+                const color = profit >= 0 ? "limegreen" : "red";
+                const sign = profit >= 0 ? "+" : "";
 
-                    const color =
-                      percentageChange !== undefined
-                        ? percentageChange >= 0
-                          ? "limegreen"
-                          : "red"
-                        : "white";
-
-                    return [
-                      <span key="1" style={{ color }}>{`${formattedValue}${formattedPercentage}`}</span>,
-                      <span key="2" style={{ color }}>Value</span>,
-                    ];
+                return [
+                  <span key="1" style={{ color }}>
+                    {formattedValue}
+                  </span>,
+                  <span key="2" style={{ color }}>
+                    {sign}${profit.toFixed(2)} ({sign}{returnPct.toFixed(2)}%)
+                  </span>,
+                ];
               }}
-              contentStyle={{ backgroundColor: "#222", borderColor: "#555" }} // dark background + border
-              labelStyle={{ color: "#eee" }} // label text color (date)
-              itemStyle={{ color: "limegreen" }} // value text color
+              contentStyle={{ backgroundColor: "#222", borderColor: "#555" }}
+              labelStyle={{ color: "#eee" }}
             />
             <Line
               type="monotone"

@@ -33,6 +33,7 @@ export default function Home() {
   const [userData, setUserData] = useState<UserData | null>(null); // Example dashboard data
   const [totalProfit, setTotalProfit] = useState<number>(0);
   const [totalReturnPercentage, setTotalReturnPercentage] = useState<number>(0);
+  const [initialDeposit, setInitialDeposit] = useState<number>(0);
 
   const [activeTab, setActiveTab] = useState<"dashboard" | "leaderboard">("dashboard");
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -72,9 +73,10 @@ export default function Home() {
             if (!us.avgCost || us.shares === 0) return acc;
             return acc + us.avgCost * us.shares;
           }, 0);
-          const initialDeposit = costBasis + user.cashBalance;
-          setTotalProfit(totalPortfolioValue - initialDeposit);
-          const returnPct = initialDeposit > 0 ? ((totalPortfolioValue - initialDeposit) / initialDeposit) * 100 : 0;
+          const deposit = costBasis + user.cashBalance;
+          setInitialDeposit(deposit);
+          setTotalProfit(totalPortfolioValue - deposit);
+          const returnPct = deposit > 0 ? ((totalPortfolioValue - deposit) / deposit) * 100 : 0;
           setTotalReturnPercentage(returnPct);
         }
       }
@@ -384,6 +386,7 @@ export default function Home() {
                 <PortfolioLineChart
                   portfolioValue={portfolioValue}
                   userId={userData?.userId || ""}
+                  initialDeposit={initialDeposit}
                 />
               </div>
               <div

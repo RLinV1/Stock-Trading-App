@@ -165,16 +165,22 @@ export default function StockDetailPage() {
           </button>
         </div>
 
-        {userData && userStock && (
+        {userData && (
           <div className="mt-6 p-4 bg-light-custom border border-blue-300 rounded-lg text-base text-white font-medium shadow-sm">
-            <p>Shares owned: {userStock.shares}</p>
-            <p>
-              Average cost: $
-              {userStock.avgCost.toLocaleString("en-US", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
-            </p>
+            {userStock && userStock.shares > 0 ? (
+              <>
+                <p>Shares owned: {userStock.shares}</p>
+                <p>
+                  Average cost: $
+                  {userStock.avgCost.toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </p>
+              </>
+            ) : (
+              <p>You don&apos;t own any shares of this stock</p>
+            )}
             <p>
               Cash balance: $
               {userData.cashBalance.toLocaleString("en-US", {
