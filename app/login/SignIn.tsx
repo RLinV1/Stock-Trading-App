@@ -55,35 +55,51 @@ const SignInPage = () => {
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || `HTTP error ${response.status}`);
+        let errorMessage = "";
+        const contentType = response.headers.get("content-type");
+
+        if (contentType && contentType.includes("application/json")) {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.error || JSON.stringify(errorData);
+        } else {
+          errorMessage = await response.text();
+        }
+
+        if (response.status === 401) {
+          throw new Error("Invalid username or password. Please try again.");
+        } else if (response.status === 409) {
+          throw new Error("An account with this username already exists.");
+        } else if (response.status === 400) {
+          throw new Error(errorMessage || "Please check your input and try again.");
+        } else {
+          throw new Error(errorMessage || "Something went wrong. Please try again later.");
+        }
       }
 
-
       const data = await response.json();
-      console.log("Response data:", data);
-
-      router.push("/"); // Redirect to home page
+      router.push("/");
     } catch (err) {
       console.error("Error during sign-in or registration:", err);
       if (!(err instanceof Error)) {
-        setError("An unknown error occurred.");
+        setError("An unexpected error occurred. Please try again.");
         return;
       }
 
-       const formattedError = err.message
-      .split(';')
-      .map(msg => msg.trim())
-      .filter(msg => msg.length > 0)
-      .map(msg => {
-        // Remove "fieldName: " prefix if it exists
-        const colonIndex = msg.indexOf(':');
-        return colonIndex > 0 ? msg.substring(colonIndex + 1).trim() : msg;
-      })
-      .map(msg => `• ${msg}`)
-      .join('\n');
-      
-      setError(formattedError);
+      if (err.message === "Failed to fetch") {
+        setError("Unable to connect to the server. Please check your connection.");
+        return;
+      }
+
+      const messages = err.message
+        .split(';')
+        .map(msg => msg.trim())
+        .filter(msg => msg.length > 0)
+        .map(msg => {
+          const colonIndex = msg.indexOf(':');
+          return colonIndex > 0 ? msg.substring(colonIndex + 1).trim() : msg;
+        });
+
+      setError(messages.length > 1 ? messages.map(m => `• ${m}`).join('\n') : messages[0]);
     }
   };
 

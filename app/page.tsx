@@ -7,13 +7,13 @@ import { AllocationChart } from "./_components/AllocationChart";
 import { LeaderboardEntry, Stock, UserData, UserStock } from "./_types/types";
 import { useRouter } from "next/navigation";
 import { checkAuth, signOut } from "./_util/auth";
+import { getPortfolioSnapshots } from "./_util/portfolio";
 import axios from "axios";
 import {
   buyStock,
   getStocks,
   getTotalPortfolioValue,
   getTotalProfit,
-  getTotalReturnPercentage,
   getUserStocks,
   searchStock,
   sellStock,
@@ -34,6 +34,7 @@ export default function Home() {
   const [userData, setUserData] = useState<UserData | null>(null); // Example dashboard data
   const [totalProfit, setTotalProfit] = useState<number>(0);
   const [totalReturnPercentage, setTotalReturnPercentage] = useState<number>(0);
+  const [initialPortfolioValue, setInitialPortfolioValue] = useState<number>(0);
 
   const [activeTab, setActiveTab] = useState<"dashboard" | "leaderboard">("dashboard");
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -65,9 +66,15 @@ export default function Home() {
 
         if (userStocksData) {
           setUserStocks(userStocksData);
-          setPortfolioValue(getTotalPortfolioValue(userStocksData));
+          const currentPortfolioValue = getTotalPortfolioValue(userStocksData);
+          setPortfolioValue(currentPortfolioValue);
           setTotalProfit(getTotalProfit(userStocksData));
-          setTotalReturnPercentage(getTotalReturnPercentage(userStocksData));
+
+          const snapshots = await getPortfolioSnapshots(user.userId);
+          const initialValue = snapshots.length > 0 ? snapshots[0].portfolioValue : currentPortfolioValue;
+          setInitialPortfolioValue(initialValue);
+          const returnPct = initialValue > 0 ? ((currentPortfolioValue - initialValue) / initialValue) * 100 : 0;
+          setTotalReturnPercentage(returnPct);
         }
       }
     } catch (err) {
@@ -101,9 +108,12 @@ export default function Home() {
           ...us,
           stock: updatedStocks.find((s) => s.id === us.stockId) || us.stock,
         }));
-        setPortfolioValue(getTotalPortfolioValue(updated));
+        const newPortfolioValue = getTotalPortfolioValue(updated);
+        setPortfolioValue(newPortfolioValue);
         setTotalProfit(getTotalProfit(updated));
-        setTotalReturnPercentage(getTotalReturnPercentage(updated));
+        if (initialPortfolioValue > 0) {
+          setTotalReturnPercentage(((newPortfolioValue - initialPortfolioValue) / initialPortfolioValue) * 100);
+        }
         return updated;
       });
     };
@@ -315,9 +325,9 @@ export default function Home() {
                       </div>
                       <div className="text-right">
                         <div className="text-2xl font-bold text-success">
-                          ${entry.cashBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          ${entry.portfolioValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </div>
-                        <div className="text-sm text-muted-foreground">Cash Balance</div>
+                        <div className="text-sm text-muted-foreground">Portfolio Value</div>
                       </div>
                     </div>
                   );

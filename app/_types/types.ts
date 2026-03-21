@@ -29,7 +29,7 @@ export interface PortfolioSnapshot {
 
 export interface LeaderboardEntry {
   username: string;
-  cashBalance: number;
+  portfolioValue: number;
 }
 
 // error type

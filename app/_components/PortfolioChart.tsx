@@ -38,11 +38,17 @@ const PortfolioLineChartComponent = ({
       snapshots: PortfolioSnapshot[]
     ): PortfolioDataPoint[] => {
       return snapshots.map((snapshot, index, arr) => {
-        const value = snapshot.portfolioValue; // or snapshot.value if your API uses that
+        const value = snapshot.portfolioValue;
         const dt = new Date(snapshot.dateTime);
-        const date = dt.toLocaleTimeString("en-US", { hour12: false });
+        const date = dt.toLocaleString("en-US", {
+          month: "short",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
+        });
 
-        const prevValue = portfolioValue;
+        const prevValue = index > 0 ? arr[index - 1].portfolioValue : value;
         const percentageChange = ((value - prevValue) / prevValue) * 100;
 
         return {
@@ -69,23 +75,25 @@ const PortfolioLineChartComponent = ({
       const newData = [...prevData];
       const timestamp = Date.now();
 
+      const dateStr = new Date(timestamp).toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+
       if (newData.length === 0) {
         return [
           {
             value: portfolioValue,
-            date: new Date(timestamp).toLocaleString("en-US", {
-              month: "short",
-              day: "numeric",
-            }),
+            date: dateStr,
           },
         ];
       }
       const latest: PortfolioDataPoint = {
         value: portfolioValue,
-        date: new Date(timestamp).toLocaleString("en-US", {
-          month: "short",
-          day: "numeric",
-        }),
+        date: dateStr,
         percentageChange: 0,
       };
 
@@ -99,9 +107,9 @@ const PortfolioLineChartComponent = ({
     return <div>Loading chart...</div>;
   }
 
-  const currentValue =
-    performanceData[performanceData.length - 1]?.value || 100000;
-  const totalReturn = currentValue - performanceData[0]?.value;
+  const initialValue = performanceData[0]?.value || 0;
+  const currentValue = performanceData[performanceData.length - 1]?.value || 0;
+  const totalReturn = currentValue - initialValue;
   const isPositive = totalReturn >= 0;
 
   return (
@@ -121,7 +129,7 @@ const PortfolioLineChartComponent = ({
             }`}
           >
             {isPositive ? "+" : "-"}${Math.abs(totalReturn).toFixed(2)} (
-            {((totalReturn / 100000) * 100).toFixed(2)}%)
+            {initialValue > 0 ? ((totalReturn / initialValue) * 100).toFixed(2) : "0.00"}%)
           </span>
         </div>
         <p className="text-sm text-muted-foreground">
