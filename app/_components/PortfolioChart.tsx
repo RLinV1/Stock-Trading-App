@@ -16,18 +16,19 @@ import { PortfolioSnapshot } from "../_types/types";
 interface PortfolioDataPoint {
   date: string;
   value: number;
-  percentageChange?: number;
 }
 interface PortfolioLineChartProps {
   portfolioValue: number;
   userId: string;
   initialDeposit: number;
+  cashBalance: number;
 }
 
 const PortfolioLineChartComponent = ({
   portfolioValue,
   userId,
   initialDeposit,
+  cashBalance,
 }: PortfolioLineChartProps) => {
   const [performanceData, setPerformanceData] = useState<PortfolioDataPoint[]>(
     []
@@ -39,8 +40,8 @@ const PortfolioLineChartComponent = ({
     const mapToDataPoints = (
       snapshots: PortfolioSnapshot[]
     ): PortfolioDataPoint[] => {
-      return snapshots.map((snapshot, index, arr) => {
-        const value = snapshot.portfolioValue;
+      return snapshots.map((snapshot, index) => {
+        const value = snapshot.portfolioValue + cashBalance;
         const dt = new Date(snapshot.dateTime);
         const date = dt.toLocaleString("en-US", {
           month: "short",
@@ -50,13 +51,9 @@ const PortfolioLineChartComponent = ({
           hour12: true,
         });
 
-        const prevValue = index > 0 ? arr[index - 1].portfolioValue : value;
-        const percentageChange = ((value - prevValue) / prevValue) * 100;
-
         return {
           date,
           value,
-          percentageChange: index === 0 ? undefined : percentageChange,
         };
       });
     };
@@ -96,7 +93,6 @@ const PortfolioLineChartComponent = ({
       const latest: PortfolioDataPoint = {
         value: portfolioValue,
         date: dateStr,
-        percentageChange: 0,
       };
 
       newData[newData.length - 1] = latest;
@@ -170,11 +166,9 @@ const PortfolioLineChartComponent = ({
 
                 return [
                   <span key="1" style={{ color }}>
-                    {formattedValue}
+                    {formattedValue} ({sign}{returnPct.toFixed(2)}%)
                   </span>,
-                  <span key="2" style={{ color }}>
-                    {sign}${profit.toFixed(2)} ({sign}{returnPct.toFixed(2)}%)
-                  </span>,
+                  "Portfolio",
                 ];
               }}
               contentStyle={{ backgroundColor: "#222", borderColor: "#555" }}

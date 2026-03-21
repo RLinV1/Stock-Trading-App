@@ -387,6 +387,7 @@ export default function Home() {
                   portfolioValue={portfolioValue}
                   userId={userData?.userId || ""}
                   initialDeposit={initialDeposit}
+                  cashBalance={totalCash}
                 />
               </div>
               <div
