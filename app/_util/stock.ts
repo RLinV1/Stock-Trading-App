@@ -87,17 +87,11 @@ export const getTotalProfit = (userStocksData: UserStock[]) => {
   return totalProfit;
 };
 
+const DEFAULT_DEPOSIT = 10000;
+
 export const getTotalReturnPercentage = (userStocksData: UserStock[]) => {
-  const totalReturnPercentageData = userStocksData.reduce(
-    (acc: number, us: UserStock) => {
-      if (!us.stock || !us.avgCost) return acc;
-      if (us.shares === 0) return acc;
-      const profit = us.stock.currentPrice * us.shares - us.avgCost * us.shares;
-      return acc + (profit / (us.avgCost * us.shares)) * 100;
-    },
-    0
-  );
-  return totalReturnPercentageData;
+  const portfolioValue = getTotalPortfolioValue(userStocksData);
+  return ((portfolioValue - DEFAULT_DEPOSIT) / DEFAULT_DEPOSIT) * 100;
 };
 
 export const getTotalPortfolioValue = (userStocksData: UserStock[]) => {

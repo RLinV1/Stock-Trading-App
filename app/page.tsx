@@ -1,12 +1,13 @@
 "use client";
 
-import { BarChart3, PieChartIcon, TrendingUp } from "lucide-react";
+import { BarChart3, PieChartIcon, Trophy, TrendingUp } from "lucide-react";
 import { PortfolioLineChart } from "./_components/PortfolioChart";
 import { useEffect, useState } from "react";
 import { AllocationChart } from "./_components/AllocationChart";
-import { Stock, UserData, UserStock } from "./_types/types";
+import { LeaderboardEntry, Stock, UserData, UserStock } from "./_types/types";
 import { useRouter } from "next/navigation";
 import { checkAuth, signOut } from "./_util/auth";
+import axios from "axios";
 import {
   buyStock,
   getStocks,
@@ -34,13 +35,16 @@ export default function Home() {
   const [totalProfit, setTotalProfit] = useState<number>(0);
   const [totalReturnPercentage, setTotalReturnPercentage] = useState<number>(0);
 
+  const [activeTab, setActiveTab] = useState<"dashboard" | "leaderboard">("dashboard");
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Stock[]>([]);
   const debouncedQuery = useDebounce(query, 300); // 300ms debounce
 
   const router = useRouter();
 
-  const refreshUser = async () => {
+  const refreshAll = async () => {
     try {
       const user = await checkAuth();
 
@@ -53,32 +57,82 @@ export default function Home() {
       if (user) {
         setTotalCash(user.cashBalance);
         setUserData(user);
+
+        const stockData = await getStocks();
+        setStocks(stockData);
+
+        const userStocksData = await getUserStocks(user, stockData);
+
+        if (userStocksData) {
+          setUserStocks(userStocksData);
+          setPortfolioValue(getTotalPortfolioValue(userStocksData));
+          setTotalProfit(getTotalProfit(userStocksData));
+          setTotalReturnPercentage(getTotalReturnPercentage(userStocksData));
+        }
       }
     } catch (err) {
       if (err instanceof Error) console.error(err.message);
+    } finally {
+      setLoading(false);
     }
   };
-  useEffect(() => {
-    const run = async () => {
-      await refreshUser();
-      setLoading(false);
-    };
 
-    run();
-    const intervalId = setInterval(refreshUser, 30000); // every 30s
-    return () => clearInterval(intervalId);
+  // Initial load
+  useEffect(() => {
+    refreshAll();
   }, [router]);
 
+  // SSE: subscribe to real-time stock price updates
   useEffect(() => {
-    if (!userData) return;
+    if (!userData?.userId) return;
 
-    console.log(userData);
-    const fetchAll = async () => await fetchData();
-    fetchAll();
+    const eventSource = new EventSource(
+      `https://stock-trading-app-backend-production.up.railway.app/api/stock/stream`,
+      { withCredentials: true }
+    );
 
-    const intervalId = setInterval(fetchAll, 20000);
-    return () => clearInterval(intervalId);
-  }, [userData]); // only run when userData is set
+    eventSource.onmessage = (event) => {
+      const updatedStocks: Stock[] = JSON.parse(event.data);
+      setStocks(updatedStocks);
+
+      // Recalculate portfolio values with new stock prices
+      setUserStocks((prev) => {
+        const updated = prev.map((us) => ({
+          ...us,
+          stock: updatedStocks.find((s) => s.id === us.stockId) || us.stock,
+        }));
+        setPortfolioValue(getTotalPortfolioValue(updated));
+        setTotalProfit(getTotalProfit(updated));
+        setTotalReturnPercentage(getTotalReturnPercentage(updated));
+        return updated;
+      });
+    };
+
+    eventSource.onerror = () => {
+      console.error("SSE connection lost, reconnecting...");
+      eventSource.close();
+    };
+
+    return () => eventSource.close();
+  }, [userData?.userId]);
+
+  const fetchLeaderboard = async () => {
+    try {
+      const res = await axios.get<LeaderboardEntry[]>(
+        "https://stock-trading-app-backend-production.up.railway.app/api/leaderboard",
+        { withCredentials: true }
+      );
+      setLeaderboard(res.data);
+    } catch (err) {
+      console.error("Error fetching leaderboard:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "leaderboard") {
+      fetchLeaderboard();
+    }
+  }, [activeTab]);
 
   const handleSignOut = async () => {
     try {
@@ -89,68 +143,21 @@ export default function Home() {
     }
   };
 
-  const fetchData = async () => {
-    if (!userData?.userId) return; // wait until userData is available
-
-    try {
-      const stockData = await getStocks();
-      setStocks(stockData);
-
-      const userStocksData: UserStock[] | null = await getUserStocks(
-        userData,
-        stockData
-      );
-
-      if (userStocksData) {
-        console.log(userStocksData);
-        setUserStocks(userStocksData);
-
-        const totalValue = getTotalPortfolioValue(userStocksData);
-
-        setPortfolioValue(totalValue);
-
-        const totalProfitData = getTotalProfit(userStocksData);
-        setTotalProfit(totalProfitData);
-
-        const totalReturnPercentageData =
-          getTotalReturnPercentage(userStocksData);
-        setTotalReturnPercentage(totalReturnPercentageData);
-
-        console.log("hey");
-        setLoading(false);
-      } else {
-        throw new Error("Error fetching data");
-      }
-    } catch (err) {
-      console.error("Error fetching data:", err);
-      setLoading(false);
-    }
-  };
-
   const handleBuy = async (userStock: UserStock, shares: number) => {
     try {
-      const stockData = await buyStock(userStock, 1);
-      await refreshUser();
-
-      console.log(stockData);
-      fetchData(); // Refresh data after buying
+      await buyStock(userStock, 1);
+      await refreshAll();
     } catch (err) {
-      if (err instanceof Error) {
-        console.error(err.message);
-      }
+      if (err instanceof Error) console.error(err.message);
     }
   };
 
   const handleSell = async (userStock: UserStock, shares: number) => {
     try {
-      const sellStockData = await sellStock(userStock, 1);
-      await refreshUser();
-
-      fetchData();
+      await sellStock(userStock, 1);
+      await refreshAll();
     } catch (err) {
-      if (err instanceof Error) {
-        console.error(err.message);
-      }
+      if (err instanceof Error) console.error(err.message);
     }
   };
   useEffect(() => {
@@ -254,8 +261,78 @@ export default function Home() {
           </div>
         </header>
 
+        {/* Tab Navigation */}
+        <div className="border-b border-border bg-light-custom">
+          <div className="container mx-auto px-4 flex gap-6">
+            <button
+              onClick={() => setActiveTab("dashboard")}
+              className={`py-3 px-4 font-semibold text-lg cursor-pointer border-b-2 transition-colors ${
+                activeTab === "dashboard"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Dashboard
+            </button>
+            <button
+              onClick={() => setActiveTab("leaderboard")}
+              className={`py-3 px-4 font-semibold text-lg cursor-pointer border-b-2 transition-colors flex items-center gap-2 ${
+                activeTab === "leaderboard"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Trophy className="h-5 w-5" />
+              Leaderboard
+            </button>
+          </div>
+        </div>
+
         {/* Main Content */}
         <main className="flex flex-col px-2 md:px-4 max-w-screen-xl mx-auto w-full py-10">
+          {activeTab === "leaderboard" ? (
+            <div className="w-full">
+              <h2 className="text-3xl font-semibold mb-8">Top Portfolios</h2>
+              <div className="flex flex-col gap-4">
+                {leaderboard.map((entry, index) => {
+                  const medal =
+                    index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : null;
+
+                  return (
+                    <div
+                      key={entry.username}
+                      className={`flex items-center justify-between p-5 rounded-lg shadow-md ${
+                        index < 3 ? "bg-light-custom" : "bg-card"
+                      }`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="text-3xl w-12 text-center">
+                          {medal ?? <span className="text-muted-foreground text-xl">#{index + 1}</span>}
+                        </div>
+                        <div>
+                          <div className={`font-bold text-xl ${index < 3 ? "text-foreground" : "text-foreground"}`}>
+                            {entry.username}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            Cash: ${entry.cashBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-success">
+                          ${entry.portfolioValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Portfolio Value</div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {leaderboard.length === 0 && (
+                  <div className="text-lg text-muted-foreground">No leaderboard data available</div>
+                )}
+              </div>
+            </div>
+          ) : (
           <div className="flex items-start justify-between mb-8 w-full lg:gap-12 flex-col gap-4 lg:flex-row">
             {/* Left Side - Portfolio Analysis */}
             <div className="w-full h-full">
@@ -467,6 +544,7 @@ export default function Home() {
               <div className="text-lg">No holdings available</div>
             )}
           </div>
+          )}
         </main>
       </div>
     </div>
