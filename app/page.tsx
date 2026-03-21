@@ -7,7 +7,6 @@ import { AllocationChart } from "./_components/AllocationChart";
 import { LeaderboardEntry, Stock, UserData, UserStock } from "./_types/types";
 import { useRouter } from "next/navigation";
 import { checkAuth, signOut } from "./_util/auth";
-import { getPortfolioSnapshots } from "./_util/portfolio";
 import axios from "axios";
 import {
   buyStock,
@@ -70,10 +69,12 @@ export default function Home() {
           setPortfolioValue(currentPortfolioValue);
           setTotalProfit(getTotalProfit(userStocksData));
 
-          const snapshots = await getPortfolioSnapshots(user.userId);
-          const initialValue = snapshots.length > 0 ? snapshots[0].portfolioValue : currentPortfolioValue;
-          setInitialPortfolioValue(initialValue);
-          const returnPct = initialValue > 0 ? ((currentPortfolioValue - initialValue) / initialValue) * 100 : 0;
+          const costBasis = userStocksData.reduce((acc: number, us: UserStock) => {
+            if (!us.avgCost || us.shares === 0) return acc;
+            return acc + us.avgCost * us.shares;
+          }, 0);
+          setInitialPortfolioValue(costBasis);
+          const returnPct = costBasis > 0 ? ((currentPortfolioValue - costBasis) / costBasis) * 100 : 0;
           setTotalReturnPercentage(returnPct);
         }
       }
@@ -325,7 +326,7 @@ export default function Home() {
                       </div>
                       <div className="text-right">
                         <div className="text-2xl font-bold text-success">
-                          ${entry.portfolioValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          ${(entry.portfolioValue ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </div>
                         <div className="text-sm text-muted-foreground">Portfolio Value</div>
                       </div>
